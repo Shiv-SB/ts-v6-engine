@@ -150,4 +150,10 @@ input:checked + .slider:before {
 
 .captured-pieces {
   padding-top: 30px;
+  font-size: larger;
+}
+
+.captured-pieces span {
+  font-size: 48px;
+  font-weight: lighter;
 }
