@@ -1,22 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './chessboard.css';
-// import { Bit64 } from '@/utils/utils'; // Remvoe
-
-type PieceTypes =
-    | 'Rook'
-    | 'Knight'
-    | 'Bishop'
-    | 'Queen'
-    | 'King'
-    | 'Pawn';
-
-interface Piece {
-    label: string;
-    type: PieceTypes;
-    color: 'white' | 'black';
-    value: number; // Add a value to represent the piece
-}
-
 interface SquareProps {
     index: number;
     piece: Piece | null;
@@ -96,6 +79,7 @@ const Square: React.FC<SquareProps> = ({
                     }}
                 />
             )}
+            {/* debug */ false && <span style={{ fontSize: "30%", color: "green" }}>{index}</span>}
         </div>
     );
 };
@@ -153,32 +137,32 @@ const Chessboard: React.FC = () => {
             initialBoard[index] = { type, color, label, value: pieceValue };
         };
 
-        // White pieces
-        setPiece(0, 'Rook', '\u2656', 'white');
-        setPiece(1, 'Knight', '\u2658', 'white');
-        setPiece(2, 'Bishop', '\u2657', 'white');
-        setPiece(3, 'Queen', '\u2655', 'white');
-        setPiece(4, 'King', '\u2654', 'white');
-        setPiece(5, 'Bishop', '\u2657', 'white');
-        setPiece(6, 'Knight', '\u2658', 'white');
-        setPiece(7, 'Rook', '\u2656', 'white');
+        // Black pieces
+        setPiece(0, 'Rook', '\u265C', 'black');
+        setPiece(1, 'Knight', '\u265E', 'black');
+        setPiece(2, 'Bishop', '\u265D', 'black');
+        setPiece(3, 'Queen', '\u265B', 'black');
+        setPiece(4, 'King', '\u265A', 'black');
+        setPiece(5, 'Bishop', '\u265D', 'black');
+        setPiece(6, 'Knight', '\u265E', 'black');
+        setPiece(7, 'Rook', '\u265C', 'black');
 
         for (let i = 8; i < 16; i++) {
-            setPiece(i, 'Pawn', '\u2659', 'white');
+            setPiece(i, 'Pawn', '\u265F', 'black');
         }
 
-        // Black pieces
-        setPiece(56, 'Rook', '\u265C', 'black');
-        setPiece(57, 'Knight', '\u265E', 'black');
-        setPiece(58, 'Bishop', '\u265D', 'black');
-        setPiece(59, 'Queen', '\u265B', 'black');
-        setPiece(60, 'King', '\u265A', 'black');
-        setPiece(61, 'Bishop', '\u265D', 'black');
-        setPiece(62, 'Knight', '\u265E', 'black');
-        setPiece(63, 'Rook', '\u265C', 'black');
+        // White pieces
+        setPiece(56, 'Rook', '\u2656', 'white');
+        setPiece(57, 'Knight', '\u2658', 'white');
+        setPiece(58, 'Bishop', '\u2657', 'white');
+        setPiece(59, 'Queen', '\u2655', 'white');
+        setPiece(60, 'King', '\u2654', 'white');
+        setPiece(61, 'Bishop', '\u2657', 'white');
+        setPiece(62, 'Knight', '\u2658', 'white');
+        setPiece(63, 'Rook', '\u2656', 'white');
 
         for (let i = 48; i < 56; i++) {
-            setPiece(i, 'Pawn', '\u265F', 'black');
+            setPiece(i, 'Pawn', '\u2659', 'white');
         }
 
         setPiecePositions(initialBoard);
@@ -309,11 +293,7 @@ const Chessboard: React.FC = () => {
 
             switch (piece.type) {
                 case 'Pawn': {
-                    const captureDirection = piece.color === 'white' ? 1 : -1; // Direction of capture
-                    const targetRow = Math.floor(dropIndex / 8);
-                    const targetCol = dropIndex % 8;
-                    const currentRow = Math.floor(dragIndex / 8);
-                    const currentCol = dragIndex % 8;
+                    const captureDirection = piece.color === 'white' ? -1 : 1; // Direction of capture
 
                     const isDiagonalCapture =
                         rowDiff === 1 && colDiff === 1 && piecePositions[dropIndex] !== null;
@@ -321,8 +301,8 @@ const Chessboard: React.FC = () => {
                     const isForwardMove = colDiff === 0 && (dropIndex === dragIndex + captureDirection * 8);
                     const isTwoSquareMove =
                         colDiff === 0 && rowDiff === 2 &&
-                        ((piece.color === 'white' && dragIndex >= 8 && dragIndex <= 15) ||
-                            (piece.color === 'black' && dragIndex >= 48 && dragIndex <= 55)); // Check for initial two-square move
+                        ((piece.color === 'white' && dragIndex >= 48 && dragIndex <= 55) ||
+                            (piece.color === 'black' && dragIndex >= 8 && dragIndex <= 15)); // Check for initial two-square move
 
                     if (isDiagonalCapture) {
                         return true; // Diagonal capture is valid
@@ -414,11 +394,13 @@ const Chessboard: React.FC = () => {
 
         switch (piece.type) {
             case 'Pawn': {
-                const captureDirection = piece.color === 'white' ? 1 : -1; // Direction of capture
-                const targetRow = Math.floor(dropIndex / 8);
-                const targetCol = dropIndex % 8;
-                const currentRow = Math.floor(dragIndex / 8);
-                const currentCol = dragIndex % 8;
+                const captureDirection = piece.color === 'white' ? -1 : 1; // Direction of capture
+                const moveDirection = Math.floor(dropIndex / 8) - Math.floor(dragIndex / 8);
+
+                if ((piece.color === 'white' && moveDirection >= 0) || 
+                    (piece.color === 'black' && moveDirection <= 0)) {
+                        return false;
+                }
 
                 const isDiagonalCapture =
                     rowDiff === 1 && colDiff === 1 && piecePositions[dropIndex] !== null;
@@ -426,8 +408,8 @@ const Chessboard: React.FC = () => {
                 const isForwardMove = colDiff === 0 && rowDiff === 1;
                 const isTwoSquareMove =
                     colDiff === 0 && rowDiff === 2 &&
-                    ((piece.color === 'white' && dragIndex >= 8 && dragIndex <= 15) ||
-                        (piece.color === 'black' && dragIndex >= 48 && dragIndex <= 55)); // Check for initial two-square move
+                    ((piece.color === 'white' && dragIndex >= 48 && dragIndex <= 55) ||
+                        (piece.color === 'black' && dragIndex >= 8 && dragIndex <= 15)); // Check for initial two-square move
 
                 if (isDiagonalCapture) {
                     return true; // Diagonal capture is valid
@@ -611,8 +593,8 @@ const Chessboard: React.FC = () => {
                 />
             );
         }
-        //console.info('Rendering board...');
         return board;
+
     };
 
     const handleNewGame = () => {
@@ -638,24 +620,24 @@ const Chessboard: React.FC = () => {
                 <div>
                     Play as:
                     <label className="switch">
-                    <input
-                        type="checkbox"
-                        checked={playerColor === 'white'}
-                        onChange={() => handleColorChange(playerColor === 'white' ? 'black' : 'white')}
-                    />
-                    <span className="slider round"></span>
+                        <input
+                            type="checkbox"
+                            checked={playerColor === 'white'}
+                            onChange={() => handleColorChange(playerColor === 'white' ? 'black' : 'white')}
+                        />
+                        <span className="slider round"></span>
                     </label>
                     {playerColor === 'white' ? 'White' : 'Black'}
                 </div>
                 <div>
                     AI Mode:
                     <label className="switch">
-                    <input
-                        type="checkbox"
-                        checked={isAiMode}
-                        onChange={toggleAiMode}
-                    />
-                    <span className="slider round"></span>
+                        <input
+                            type="checkbox"
+                            checked={isAiMode}
+                            onChange={toggleAiMode}
+                        />
+                        <span className="slider round"></span>
                     </label>
                     {isAiMode ? 'Enabled' : 'Disabled'}
                 </div>

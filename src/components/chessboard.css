@@ -20,6 +20,7 @@
   grid-template-rows: repeat(8, 60px);
   border: 3px solid black;
   box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.2);
+  position: relative;
 }
 
 .square {
@@ -31,6 +32,12 @@
   font-size: 36px; /* Bigger font for Unicode symbols */
   cursor: pointer;
   font-weight: bold;
+}
+
+.square-container {
+  position: relative;
+  width: 60px;
+  height: 65px;
 }
 
 .light {
@@ -116,4 +123,26 @@ input:checked + .slider:before {
 
 .slider.round:before {
   border-radius: 50%;
+}
+
+.row-label {
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.col-label {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.captured-pieces {
+  padding-top: 30px;
 }
