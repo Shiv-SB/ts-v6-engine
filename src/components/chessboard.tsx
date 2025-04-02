@@ -66,7 +66,7 @@ const Square: React.FC<SquareProps> = ({
     return (
         <div
             className={`square ${isLight ? 'light' : 'dark'} ${isHighlighted ? 'highlighted' : ''
-                }`}
+}`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragStart={handleDragStart}
@@ -80,7 +80,12 @@ const Square: React.FC<SquareProps> = ({
                     }}
                 />
             )}
-            {/* debug */ false && <span style={{ fontSize: "30%", color: "green" }}>{index}</span>}
+            {/* debug */ false && <span style={{ 
+                fontSize: "30%", 
+                color: "green", 
+                position: "absolute", 
+                padding: "15px" 
+            }}>{index}</span>}
         </div>
     );
 };
@@ -579,6 +584,8 @@ const Chessboard: React.FC = () => {
 
     const renderBoard = () => {
         const board = [];
+        const labelRow = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+        const labelCol = [8, 7, 6, 5, 4, 3, 2, 1];
         for (let i = 0; i < 64; i++) {
             const row = Math.floor(i / 8);
             const col = i % 8;
@@ -586,16 +593,28 @@ const Chessboard: React.FC = () => {
             const isHighlighted = highlightedSquares.includes(i);
 
             board.push(
-                <Square
-                    key={i}
-                    index={i}
-                    piece={piecePositions[i]}
-                    isLight={isLight}
-                    isHighlighted={isHighlighted}
-                    onDrop={handlePieceDrop}
-                    onDragOver={handleDragOver}
-                    onDragStart={handleSquareDragStart}
-                />
+                <div key={i} className="square-container">
+                    {/* Row label on the first column */}
+                    {col === 0 && (
+                        <div className="row-label">{labelCol[row]}</div>
+                    )}
+                    
+                    <Square
+                        key={i}
+                        index={i}
+                        piece={piecePositions[i]}
+                        isLight={isLight}
+                        isHighlighted={isHighlighted}
+                        onDrop={handlePieceDrop}
+                        onDragOver={handleDragOver}
+                        onDragStart={handleSquareDragStart}
+                    />
+                    
+                    {/* Column label on the last row */}
+                    {row === 7 && (
+                        <div className="col-label">{labelRow[col]}</div>
+                    )}
+                </div>
             );
         }
         return board;
