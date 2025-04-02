@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './chessboard.css';
+import EvalBar from './evalBar';
 interface SquareProps {
     index: number;
     piece: Piece | null;
@@ -99,6 +100,8 @@ const Chessboard: React.FC = () => {
         white: [],
         black: [],
     }); // Track captured pieces
+
+    const [evaluationScore, setEvaluationScore] = useState<number>(0);
 
     // Piece value assignments - keep this outside to prevent recreation
     const pieceValues = {
@@ -502,7 +505,9 @@ const Chessboard: React.FC = () => {
 
             const data = await response.json();
             console.log('Board state sent successfully:', data);
-            // Handle response from backend here, e.g., update state based on backend response
+            
+            setEvaluationScore(data.score);
+
         } catch (error) {
             console.error('Failed to send board state to backend:', error);
             // Handle error here, e.g., display an error message to the user
@@ -600,6 +605,7 @@ const Chessboard: React.FC = () => {
     const handleNewGame = () => {
         initializeBoard();
         setHighlightedSquares([]);
+        setEvaluationScore(0);
     };
 
     const handleColorChange = (color: 'white' | 'black') => {
@@ -642,7 +648,11 @@ const Chessboard: React.FC = () => {
                     {isAiMode ? 'Enabled' : 'Disabled'}
                 </div>
             </div>
-            <div className="chessboard">{renderBoard()}</div>
+            <div className="game-container">
+                <div className="chessboard">{renderBoard()}</div>
+                <EvalBar score ={evaluationScore} />
+            </div>
+
             <div className="captured-pieces">
                 <div>
                     White Captured:

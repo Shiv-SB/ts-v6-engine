@@ -1,0 +1,28 @@
+.eval-bar-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0 20px;
+}
+
+.eval-bar {
+    width: 30px;
+    height: 300px;
+    border: 1px solid #ccc;
+    position: relative;
+    background-color: white;
+}
+
+.eval-bar-fill {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background-color: black;
+    transition: height 0.3s ease;
+}
+
+.eval-score {
+    margin-top: 8px;
+    font-family: monospace;
+    font-size: 14px;
+}

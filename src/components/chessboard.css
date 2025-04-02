@@ -7,6 +7,11 @@
   font-family: "Arial", sans-serif;
 }
 
+.game-container {
+  display: flex;
+  align-items: center;
+}
+
 .controls {
   margin-bottom: 20px;
   display: flex;

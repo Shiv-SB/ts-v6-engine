@@ -14,10 +14,10 @@ const server = serve({
             POST: async req => {
 
                 const body = await req.json();
-                //console.log(JSON.stringify(body, null, 4));
-                const parsed = Engine.parseBoardState(body.boardState);
                 console.log(Engine.calculateTotalPieceScores(body.boardState));
-                return new Response(JSON.stringify(parsed));
+                return new Response(JSON.stringify({
+                    score: Engine.calculateTotalPieceScores(body.boardState)
+                }));
             }
         }
 
