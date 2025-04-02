@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './chessboard.css';
+import { Bit64 } from '@/utils/utils';
+
 
 type PieceTypes =
     | 'Rook'
@@ -9,11 +11,14 @@ type PieceTypes =
     | 'King'
     | 'Pawn';
 
+
 interface Piece {
     label: string;
     type: PieceTypes;
     color: 'white' | 'black';
+    value: number; // Add a value to represent the piece
 }
+
 
 interface SquareProps {
     index: number;
@@ -24,6 +29,7 @@ interface SquareProps {
     onDragOver: (event: React.DragEvent<HTMLDivElement>) => void;
     onDragStart: (index: number) => void;
 }
+
 
 interface PieceProps {
     piece: Piece;
@@ -106,7 +112,7 @@ const Square: React.FC<SquareProps> = ({
 
 
 const Chessboard: React.FC = () => {
-    const [boardState, setBoardState] = useState<(Piece | null)[]>(
+    const [piecePositions, setPiecePositions] = useState<(Piece | null)[]>(
         Array(64).fill(null)
     );
     const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white');
@@ -114,6 +120,27 @@ const Chessboard: React.FC = () => {
     const [draggedPieceIndex, setDraggedPieceIndex] = useState<number | null>(
         null
     );
+
+
+    // Piece value assignments - keep this outside to prevent recreation
+    const pieceValues = {
+        white: {
+            Rook: 1,
+            Knight: 2,
+            Bishop: 3,
+            Queen: 4,
+            King: 5,
+            Pawn: 6,
+        },
+        black: {
+            Rook: 7,
+            Knight: 8,
+            Bishop: 9,
+            Queen: 10,
+            King: 11,
+            Pawn: 12,
+        },
+    };
 
 
     // Initialize the board with the standard chess setup
@@ -128,7 +155,8 @@ const Chessboard: React.FC = () => {
             label: string,
             color: 'white' | 'black'
         ) => {
-            initialBoard[index] = { type, color, label };
+            const pieceValue = pieceValues[color][type];
+            initialBoard[index] = { type, color, label, value: pieceValue };
         };
 
 
@@ -141,10 +169,12 @@ const Chessboard: React.FC = () => {
         setPiece(5, 'Bishop', '\u2657', 'white');
         setPiece(6, 'Knight', '\u2658', 'white');
         setPiece(7, 'Rook', '\u2656', 'white');
-        
+
+
         for (let i = 8; i < 16; i++) {
             setPiece(i, 'Pawn', '\u2659', 'white');
         }
+
 
         // Black pieces
         setPiece(56, 'Rook', '\u265C', 'black');
@@ -156,12 +186,13 @@ const Chessboard: React.FC = () => {
         setPiece(62, 'Knight', '\u265E', 'black');
         setPiece(63, 'Rook', '\u265C', 'black');
 
+
         for (let i = 48; i < 56; i++) {
             setPiece(i, 'Pawn', '\u265F', 'black');
         }
 
 
-        setBoardState(initialBoard);
+        setPiecePositions(initialBoard);
     }, []);
 
 
@@ -175,8 +206,9 @@ const Chessboard: React.FC = () => {
         end: number,
         pieceType: PieceTypes
     ): boolean => {
-        if (pieceType === 'Knight') { // Knights can jump over pieces
-            return true; 
+        if (pieceType === 'Knight') {
+            // Knights can jump over pieces
+            return true;
         }
 
 
@@ -191,7 +223,7 @@ const Chessboard: React.FC = () => {
             const startCol = Math.min(colStart, colEnd);
             const endCol = Math.max(colStart, colEnd);
             for (let i = startCol + 1; i < endCol; i++) {
-                if (boardState[rowStart * 8 + i] !== null) {
+                if (piecePositions[rowStart * 8 + i] !== null) {
                     return false; // Piece in the way
                 }
             }
@@ -200,7 +232,7 @@ const Chessboard: React.FC = () => {
             const startRow = Math.min(rowStart, rowEnd);
             const endRow = Math.max(rowStart, rowEnd);
             for (let i = startRow + 1; i < endRow; i++) {
-                if (boardState[i * 8 + colStart] !== null) {
+                if (piecePositions[i * 8 + colStart] !== null) {
                     return false; // Piece in the way
                 }
             }
@@ -213,7 +245,7 @@ const Chessboard: React.FC = () => {
 
 
             while (row !== rowEnd) {
-                if (boardState[row * 8 + col] !== null) {
+                if (piecePositions[row * 8 + col] !== null) {
                     return false; // Piece in the way
                 }
                 row += rowDir;
@@ -235,7 +267,10 @@ const Chessboard: React.FC = () => {
         const colDiff = Math.abs((dropIndex % 8) - (dragIndex % 8));
 
 
-        if (boardState[dropIndex] && boardState[dropIndex]!.color === piece.color) {
+        if (
+            piecePositions[dropIndex] &&
+            piecePositions[dropIndex]!.color === piece.color
+        ) {
             return false; // Cannot move onto a piece of the same color
         }
 
@@ -292,13 +327,73 @@ const Chessboard: React.FC = () => {
 
     const handleSquareDragStart = (index: number) => {
         console.log(`Drag start on square: ${index}`);
-        if (boardState[index]) {
-            const validMoves = getValidMoves(index, boardState[index]!);
+        if (piecePositions[index]) {
+            const validMoves = getValidMoves(index, piecePositions[index]!);
             setHighlightedSquares(validMoves);
             setDraggedPieceIndex(index);
         } else {
             setHighlightedSquares([]);
             setDraggedPieceIndex(null);
+        }
+    };
+
+
+    const sendBoardStateToBackend = async (newBoardState: (Piece | null)[]) => {
+        function boardStateToInt(boardState: (Piece | null)[]): bigint {
+            let outputState = new Bit64();
+        
+            for (let i = 0; i < boardState.length; i++) {
+                const piece = boardState[i];
+                let pieceValue = 0;
+        
+                if (piece) {
+                    pieceValue = piece.value;
+                }
+        
+                // Iterate through each of the 4 bits for the piece value
+                for (let j = 0; j < 4; j++) {
+                    // Calculate the bit index in the Bit64 array
+                    const bitIndex = i * 4 + j;
+        
+                    // Check if the bitIndex is within the valid range
+                    if (bitIndex < 64) {
+                        // Extract the j-th bit from pieceValue
+                        const bit = (pieceValue >> j) & 1;
+        
+                        // Set the bit in the Bit64 object
+                        outputState.setBit(bitIndex, bit);
+                    }
+                }
+            }
+        
+            console.log('boardStateToInt output: ', outputState.getValue().toString());
+            return outputState.getValue();
+        }
+        
+
+        try {
+            const response = await fetch('/api/board/nextmove', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    boardState: boardStateToInt(newBoardState).toString(),
+                }),
+            });
+
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+
+            const data = await response.json();
+            console.log('Board state sent successfully:', data);
+            // Handle response from backend here, e.g., update state based on backend response
+        } catch (error) {
+            console.error('Failed to send board state to backend:', error);
+            // Handle error here, e.g., display an error message to the user
         }
     };
 
@@ -318,7 +413,7 @@ const Chessboard: React.FC = () => {
         }
 
 
-        const draggedPiece = boardState[dragIndex];
+        const draggedPiece = piecePositions[dragIndex];
 
 
         if (!draggedPiece) {
@@ -331,11 +426,13 @@ const Chessboard: React.FC = () => {
         }
 
 
-        const newBoardState = [...boardState];
+        const newBoardState = [...piecePositions];
         newBoardState[dropIndex] = draggedPiece;
         newBoardState[dragIndex] = null;
-        setBoardState(newBoardState);
+        setPiecePositions(newBoardState);
         setHighlightedSquares([]); // Clear highlighting after the move
+        // Send the new board state to the backend
+        sendBoardStateToBackend(newBoardState);
     };
 
 
@@ -357,7 +454,7 @@ const Chessboard: React.FC = () => {
                 <Square
                     key={i}
                     index={i}
-                    piece={boardState[i]}
+                    piece={piecePositions[i]}
                     isLight={isLight}
                     isHighlighted={isHighlighted}
                     onDrop={handlePieceDrop}
@@ -366,6 +463,7 @@ const Chessboard: React.FC = () => {
                 />
             );
         }
+        console.info('Rendering board...');
         return board;
     };
 
