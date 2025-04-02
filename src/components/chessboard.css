@@ -1,62 +1,119 @@
 /* chessboard.css */
 
 .chessboard-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    font-family: "Arial", sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: "Arial", sans-serif;
 }
 
 .controls {
-    margin-bottom: 20px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 .chessboard {
-    display: grid;
-    grid-template-columns: repeat(8, 60px);
-    grid-template-rows: repeat(8, 60px);
-    border: 3px solid black;
-    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.2);
+  display: grid;
+  grid-template-columns: repeat(8, 60px);
+  grid-template-rows: repeat(8, 60px);
+  border: 3px solid black;
+  box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.2);
 }
 
 .square {
-    width: 60px;
-    height: 60px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 36px; /* Bigger font for Unicode symbols */
-    cursor: pointer;
-    font-weight: bold;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 36px; /* Bigger font for Unicode symbols */
+  cursor: pointer;
+  font-weight: bold;
 }
 
 .light {
-    background-color: #f0d9b5;
+  background-color: #f0d9b5;
 }
 
 .dark {
-    background-color: #b58863;
+  background-color: #b58863;
 }
 
 .square.highlighted {
-    background-color: rgba(255, 255, 0, 0.6); /* More visible highlight */
-    outline: 3px solid yellow;
+  background-color: rgba(255, 255, 0, 0.6); /* More visible highlight */
+  outline: 3px solid yellow;
 }
 
 .piece {
-    font-size: 52px; /* Larger size for visibility */
-    cursor: grab;
-    user-select: none;
-    font-weight: lighter;
+  font-size: 52px; /* Larger size for visibility */
+  cursor: grab;
+  user-select: none;
+  font-weight: lighter;
 }
 
 .piece.white {
-    color: black;
+  color: black;
 }
 
 .piece.black {
-    color: black; /* Pieces will be naturally dark, so no need for background */
+  color: black; /* Pieces will be naturally dark, so no need for background */
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+  margin: 10px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.4s;
+}
+
+input:checked + .slider {
+  background-color: #2196f3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196f3;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
 }

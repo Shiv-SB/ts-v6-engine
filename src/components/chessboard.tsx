@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './chessboard.css';
-import { Bit64 } from '@/utils/utils';
-
+// import { Bit64 } from '@/utils/utils'; // Remvoe
 
 type PieceTypes =
     | 'Rook'
@@ -11,14 +10,12 @@ type PieceTypes =
     | 'King'
     | 'Pawn';
 
-
 interface Piece {
     label: string;
     type: PieceTypes;
     color: 'white' | 'black';
     value: number; // Add a value to represent the piece
 }
-
 
 interface SquareProps {
     index: number;
@@ -30,7 +27,6 @@ interface SquareProps {
     onDragStart: (index: number) => void;
 }
 
-
 interface PieceProps {
     piece: Piece;
     index: number;
@@ -40,7 +36,6 @@ interface PieceProps {
     ) => void;
 }
 
-
 const PieceComponent: React.FC<PieceProps> = ({
     piece,
     index,
@@ -49,7 +44,6 @@ const PieceComponent: React.FC<PieceProps> = ({
     const handleDragStart = (event: React.DragEvent<HTMLDivElement>) => {
         onDragStart(event, index);
     };
-
 
     return (
         <div
@@ -61,7 +55,6 @@ const PieceComponent: React.FC<PieceProps> = ({
         </div>
     );
 };
-
 
 const Square: React.FC<SquareProps> = ({
     index,
@@ -77,17 +70,14 @@ const Square: React.FC<SquareProps> = ({
         onDrop(index, event);
     };
 
-
     const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
         event.preventDefault();
         onDragOver(event);
     };
 
-
     const handleDragStart = () => {
         onDragStart(index);
     };
-
 
     return (
         <div
@@ -110,7 +100,6 @@ const Square: React.FC<SquareProps> = ({
     );
 };
 
-
 const Chessboard: React.FC = () => {
     const [piecePositions, setPiecePositions] = useState<(Piece | null)[]>(
         Array(64).fill(null)
@@ -120,7 +109,12 @@ const Chessboard: React.FC = () => {
     const [draggedPieceIndex, setDraggedPieceIndex] = useState<number | null>(
         null
     );
-
+    const [isAiMode, setIsAiMode] = useState<boolean>(false); // New state
+    const [currentTurn, setCurrentTurn] = useState<'white' | 'black'>('white'); // Track current turn
+    const [capturedPieces, setCapturedPieces] = useState<{ white: Piece[]; black: Piece[] }>({
+        white: [],
+        black: [],
+    }); // Track captured pieces
 
     // Piece value assignments - keep this outside to prevent recreation
     const pieceValues = {
@@ -142,12 +136,12 @@ const Chessboard: React.FC = () => {
         },
     };
 
-
     // Initialize the board with the standard chess setup
     // Could maybe do 960 init too
     const initializeBoard = useCallback(() => {
         const initialBoard: (Piece | null)[] = Array(64).fill(null);
 
+        const whoToGoFirst: Piece["color"] = Math.random() < 0.5 ? "white" : "black";
 
         const setPiece = (
             index: number,
@@ -159,7 +153,6 @@ const Chessboard: React.FC = () => {
             initialBoard[index] = { type, color, label, value: pieceValue };
         };
 
-
         // White pieces
         setPiece(0, 'Rook', '\u2656', 'white');
         setPiece(1, 'Knight', '\u2658', 'white');
@@ -170,11 +163,9 @@ const Chessboard: React.FC = () => {
         setPiece(6, 'Knight', '\u2658', 'white');
         setPiece(7, 'Rook', '\u2656', 'white');
 
-
         for (let i = 8; i < 16; i++) {
             setPiece(i, 'Pawn', '\u2659', 'white');
         }
-
 
         // Black pieces
         setPiece(56, 'Rook', '\u265C', 'black');
@@ -186,20 +177,18 @@ const Chessboard: React.FC = () => {
         setPiece(62, 'Knight', '\u265E', 'black');
         setPiece(63, 'Rook', '\u265C', 'black');
 
-
         for (let i = 48; i < 56; i++) {
             setPiece(i, 'Pawn', '\u265F', 'black');
         }
 
-
         setPiecePositions(initialBoard);
+        setCapturedPieces({ white: [], black: [] }); // Reset captured pieces on new game
+        setCurrentTurn(whoToGoFirst);
     }, []);
-
 
     useEffect(() => {
         initializeBoard();
     }, [initializeBoard]);
-
 
     const isPathClear = (
         start: number,
@@ -211,12 +200,10 @@ const Chessboard: React.FC = () => {
             return true;
         }
 
-
         const rowStart = Math.floor(start / 8);
         const colStart = start % 8;
         const rowEnd = Math.floor(end / 8);
         const colEnd = end % 8;
-
 
         if (rowStart === rowEnd) {
             // Horizontal movement
@@ -243,7 +230,6 @@ const Chessboard: React.FC = () => {
             let row = rowStart + rowDir;
             let col = colStart + colDir;
 
-
             while (row !== rowEnd) {
                 if (piecePositions[row * 8 + col] !== null) {
                     return false; // Piece in the way
@@ -253,19 +239,21 @@ const Chessboard: React.FC = () => {
             }
         }
 
-
         return true; // Path is clear
     };
-
 
     const isValidMove = (
         dragIndex: number,
         dropIndex: number,
         piece: Piece
     ): boolean => {
-        const rowDiff = Math.abs(Math.floor(dropIndex / 8) - Math.floor(dragIndex / 8));
-        const colDiff = Math.abs((dropIndex % 8) - (dragIndex % 8));
 
+        if (currentTurn !== piece.color) return false;
+
+        const rowDiff = Math.abs(
+            Math.floor(dropIndex / 8) - Math.floor(dragIndex / 8)
+        );
+        const colDiff = Math.abs((dropIndex % 8) - (dragIndex % 8));
 
         if (
             piecePositions[dropIndex] &&
@@ -274,34 +262,191 @@ const Chessboard: React.FC = () => {
             return false; // Cannot move onto a piece of the same color
         }
 
-
         if (!isPathClear(dragIndex, dropIndex, piece.type)) {
             return false; // Path is blocked
         }
 
+        // Create a temporary board state to simulate the move
+        const tempBoardState = [...piecePositions];
+        const pieceToMove = tempBoardState[dragIndex]; // Get the piece that is moving
+        tempBoardState[dropIndex] = pieceToMove; // Move the piece
+        tempBoardState[dragIndex] = null; // Clear the origin square
+
+        // Function to check if a given color is in check
+        const isColorInCheck = (boardState: (Piece | null)[], color: 'white' | 'black'): boolean => {
+            // Find the king of the given color
+            const kingIndex = boardState.findIndex(
+                (p) => p && p.type === 'King' && p.color === color
+            );
+
+            if (kingIndex === -1) {
+                return false; // King not found (shouldn't happen, but handle it)
+            }
+
+            // Check if any opponent's piece can attack the king
+            for (let i = 0; i < 64; i++) {
+                const attacker = boardState[i];
+                if (attacker && attacker.color !== color) {
+                    if (isValidMoveHelper(i, kingIndex, attacker, boardState)) { // Use the helper function with the boardState argument
+                        return true; // King is under attack
+                    }
+                }
+            }
+
+            return false; // King is not under attack
+        };
+
+        // Helper function to check if a move is valid (without recursion)
+        const isValidMoveHelper = (dragIndex: number, dropIndex: number, piece: Piece, boardState: (Piece | null)[]): boolean => {
+            const rowDiff = Math.abs(
+                Math.floor(dropIndex / 8) - Math.floor(dragIndex / 8)
+            );
+            const colDiff = Math.abs((dropIndex % 8) - (dragIndex % 8));
+
+            if (!isPathClearHelper(dragIndex, dropIndex, piece.type, boardState)) {
+                return false; // Path is blocked
+            }
+
+            switch (piece.type) {
+                case 'Pawn': {
+                    const captureDirection = piece.color === 'white' ? 1 : -1; // Direction of capture
+                    const targetRow = Math.floor(dropIndex / 8);
+                    const targetCol = dropIndex % 8;
+                    const currentRow = Math.floor(dragIndex / 8);
+                    const currentCol = dragIndex % 8;
+
+                    const isDiagonalCapture =
+                        rowDiff === 1 && colDiff === 1 && piecePositions[dropIndex] !== null;
+
+                    const isForwardMove = colDiff === 0 && (dropIndex === dragIndex + captureDirection * 8);
+                    const isTwoSquareMove =
+                        colDiff === 0 && rowDiff === 2 &&
+                        ((piece.color === 'white' && dragIndex >= 8 && dragIndex <= 15) ||
+                            (piece.color === 'black' && dragIndex >= 48 && dragIndex <= 55)); // Check for initial two-square move
+
+                    if (isDiagonalCapture) {
+                        return true; // Diagonal capture is valid
+                    } else if (isForwardMove) {
+                        // Check if the square is empty for a forward move
+                        return piecePositions[dropIndex] === null;
+                    } else if (isTwoSquareMove) {
+                        // Ensure path is clear when pawn tries to move 2 squares
+                        const intermediateSquareIndex = dragIndex + (captureDirection * 8);
+                        return piecePositions[dropIndex] === null && piecePositions[intermediateSquareIndex] === null;
+                    } else {
+                        return false;
+                    }
+                }
+
+                case 'Rook':
+                    return rowDiff === 0 || colDiff === 0;
+                case 'Knight':
+                    return (rowDiff === 2 && colDiff === 1) ||
+                        (rowDiff === 1 && colDiff === 2);
+                case 'Bishop':
+                    return rowDiff === colDiff;
+                case 'Queen':
+                    return rowDiff === colDiff || rowDiff === 0 || colDiff === 0;
+                case 'King':
+                    return rowDiff <= 1 && colDiff <= 1;
+                default:
+                    return false;
+            }
+        };
+        // Helper function to check if the path is clear (without recursion)
+        const isPathClearHelper = (
+            start: number,
+            end: number,
+            pieceType: PieceTypes,
+            boardState: (Piece | null)[]
+        ): boolean => {
+            if (pieceType === 'Knight') {
+                // Knights can jump over pieces
+                return true;
+            }
+
+            const rowStart = Math.floor(start / 8);
+            const colStart = start % 8;
+            const rowEnd = Math.floor(end / 8);
+            const colEnd = end % 8;
+
+            if (rowStart === rowEnd) {
+                // Horizontal movement
+                const startCol = Math.min(colStart, colEnd);
+                const endCol = Math.max(colStart, colEnd);
+                for (let i = startCol + 1; i < endCol; i++) {
+                    if (boardState[rowStart * 8 + i] !== null) {
+                        return false; // Piece in the way
+                    }
+                }
+            } else if (colStart === colEnd) {
+                // Vertical movement
+                const startRow = Math.min(rowStart, rowEnd);
+                const endRow = Math.max(rowStart, rowEnd);
+                for (let i = startRow + 1; i < endRow; i++) {
+                    if (boardState[i * 8 + colStart] !== null) {
+                        return false; // Piece in the way
+                    }
+                }
+            } else if (Math.abs(rowStart - rowEnd) === Math.abs(colStart - colEnd)) {
+                // Diagonal movement
+                const rowDir = rowEnd > rowStart ? 1 : -1;
+                const colDir = colEnd > colStart ? 1 : -1;
+                let row = rowStart + rowDir;
+                let col = colStart + colDir;
+
+                while (row !== rowEnd) {
+                    if (boardState[row * 8 + col] !== null) {
+                        return false; // Piece in the way
+                    }
+                    row += rowDir;
+                    col += colDir;
+                }
+            }
+
+            return true; // Path is clear
+        };
+
+        // After the move, is the current player's king in check?
+        if (isColorInCheck(tempBoardState, piece.color)) {
+            return false; // Illegal move:  King would be in check after the move
+        }
 
         switch (piece.type) {
-            case 'Pawn':
-                // Need to figure out en passant
-                if (piece.color === 'white') {
-                    if (dragIndex >= 8 && dragIndex <= 15) {
-                        return (
-                            dropIndex === dragIndex + 8 || dropIndex === dragIndex + 16
-                        );
-                    }
-                    return dropIndex === dragIndex + 8;
+            case 'Pawn': {
+                const captureDirection = piece.color === 'white' ? 1 : -1; // Direction of capture
+                const targetRow = Math.floor(dropIndex / 8);
+                const targetCol = dropIndex % 8;
+                const currentRow = Math.floor(dragIndex / 8);
+                const currentCol = dragIndex % 8;
+
+                const isDiagonalCapture =
+                    rowDiff === 1 && colDiff === 1 && piecePositions[dropIndex] !== null;
+
+                const isForwardMove = colDiff === 0 && rowDiff === 1;
+                const isTwoSquareMove =
+                    colDiff === 0 && rowDiff === 2 &&
+                    ((piece.color === 'white' && dragIndex >= 8 && dragIndex <= 15) ||
+                        (piece.color === 'black' && dragIndex >= 48 && dragIndex <= 55)); // Check for initial two-square move
+
+                if (isDiagonalCapture) {
+                    return true; // Diagonal capture is valid
+                } else if (isForwardMove) {
+                    // Check if the square is empty for a forward move
+                    return piecePositions[dropIndex] === null;
+                } else if (isTwoSquareMove) {
+                    // Ensure path is clear when pawn tries to move 2 squares
+                    const intermediateSquareIndex = dragIndex + (captureDirection * 8);
+                    return piecePositions[dropIndex] === null && piecePositions[intermediateSquareIndex] === null;
                 } else {
-                    if (dragIndex >= 48 && dragIndex <= 55) {
-                        return (
-                            dropIndex === dragIndex - 8 || dropIndex === dragIndex - 16
-                        );
-                    }
-                    return dropIndex === dragIndex - 8;
+                    return false;
                 }
+            }
             case 'Rook':
                 return rowDiff === 0 || colDiff === 0;
             case 'Knight':
-                return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
+                return (rowDiff === 2 && colDiff === 1) ||
+                    (rowDiff === 1 && colDiff === 2);
             case 'Bishop':
                 return rowDiff === colDiff;
             case 'Queen':
@@ -324,7 +469,6 @@ const Chessboard: React.FC = () => {
         return validMoves;
     };
 
-
     const handleSquareDragStart = (index: number) => {
         console.log(`Drag start on square: ${index}`);
         if (piecePositions[index]) {
@@ -337,39 +481,25 @@ const Chessboard: React.FC = () => {
         }
     };
 
-
-    const sendBoardStateToBackend = async (newBoardState: (Piece | null)[]) => {
+    const sendBoardStateToBackend = async (
+        newBoardState: (Piece | null)[]
+    ) => {
         function boardStateToInt(boardState: (Piece | null)[]): bigint {
-            let outputState = new Bit64();
-        
+            let currentValue: bigint = 0n;
+
             for (let i = 0; i < boardState.length; i++) {
                 const piece = boardState[i];
                 let pieceValue = 0;
-        
+
                 if (piece) {
                     pieceValue = piece.value;
                 }
-        
-                // Iterate through each of the 4 bits for the piece value
-                for (let j = 0; j < 4; j++) {
-                    // Calculate the bit index in the Bit64 array
-                    const bitIndex = i * 4 + j;
-        
-                    // Check if the bitIndex is within the valid range
-                    if (bitIndex < 64) {
-                        // Extract the j-th bit from pieceValue
-                        const bit = (pieceValue >> j) & 1;
-        
-                        // Set the bit in the Bit64 object
-                        outputState.setBit(bitIndex, bit);
-                    }
-                }
+                currentValue += BigInt(pieceValue) << BigInt(i * 4);
             }
-        
-            console.log('boardStateToInt output: ', outputState.getValue().toString());
-            return outputState.getValue();
+
+            console.log('boardStateToInt output: ', currentValue.toString());
+            return currentValue;
         }
-        
 
         try {
             const response = await fetch('/api/board/nextmove', {
@@ -379,14 +509,14 @@ const Chessboard: React.FC = () => {
                 },
                 body: JSON.stringify({
                     boardState: boardStateToInt(newBoardState).toString(),
+                    currentTurn: currentTurn, // Send current turn to backend
+                    capturedPieces: capturedPieces, // Send captured pieces to backend
                 }),
             });
-
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-
 
             const data = await response.json();
             console.log('Board state sent successfully:', data);
@@ -397,49 +527,68 @@ const Chessboard: React.FC = () => {
         }
     };
 
-
     const handlePieceDrop = (
         dropIndex: number,
         event: React.DragEvent<HTMLDivElement>
     ) => {
-        const dragIndex = parseInt(
-            event.dataTransfer.getData('index'),
-            10
-        );
-
+        const dragIndex = parseInt(event.dataTransfer.getData('index'), 10);
 
         if (isNaN(dragIndex)) {
             return;
         }
 
-
         const draggedPiece = piecePositions[dragIndex];
-
 
         if (!draggedPiece) {
             return;
         }
 
+        if (draggedPiece.color !== currentTurn) {
+            // Invalid move: not the correct player's turn
+            return;
+        }
 
         if (!isValidMove(dragIndex, dropIndex, draggedPiece)) {
             return;
         }
 
-
         const newBoardState = [...piecePositions];
+        let capturedPiece: Piece | null = null;
+
+        if (newBoardState[dropIndex]) {
+            // Capture!
+            capturedPiece = newBoardState[dropIndex];
+        }
+
         newBoardState[dropIndex] = draggedPiece;
         newBoardState[dragIndex] = null;
-        setPiecePositions(newBoardState);
-        setHighlightedSquares([]); // Clear highlighting after the move
-        // Send the new board state to the backend
-        sendBoardStateToBackend(newBoardState);
-    };
 
+        setPiecePositions(newBoardState);
+        setHighlightedSquares([]);
+
+        // Update captured pieces
+        if (capturedPiece) {
+            setCapturedPieces((prevCapturedPieces) => ({
+                ...prevCapturedPieces,
+                [currentTurn === 'white' ? 'white' : 'black']: [
+                    ...prevCapturedPieces[currentTurn === 'white' ? 'white' : 'black'],
+                    capturedPiece!,
+                ],
+            }));
+        }
+
+        // Switch turns
+        setCurrentTurn(currentTurn === 'white' ? 'black' : 'white');
+
+        // Send the new board state to the backend ONLY if AI mode is enabled
+        if (isAiMode) {
+            sendBoardStateToBackend(newBoardState);
+        }
+    };
 
     const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
         event.preventDefault();
     };
-
 
     const renderBoard = () => {
         const board = [];
@@ -448,7 +597,6 @@ const Chessboard: React.FC = () => {
             const col = i % 8;
             const isLight = (row + col) % 2 === 0;
             const isHighlighted = highlightedSquares.includes(i);
-
 
             board.push(
                 <Square
@@ -463,47 +611,72 @@ const Chessboard: React.FC = () => {
                 />
             );
         }
-        console.info('Rendering board...');
+        //console.info('Rendering board...');
         return board;
     };
-
 
     const handleNewGame = () => {
         initializeBoard();
         setHighlightedSquares([]);
     };
 
-
     const handleColorChange = (color: 'white' | 'black') => {
         setPlayerColor(color);
     };
 
+    const toggleAiMode = () => {
+        setIsAiMode(!isAiMode);
+    };
 
     return (
         <div className="chessboard-container">
             <h1>placeholder</h1>
+            <div>Current Turn: {currentTurn === 'white' ? 'White' : 'Black'}</div>
+            <br></br>
             <div className="controls">
                 <button onClick={handleNewGame}>New Game</button>
                 <div>
                     Play as:
-                    <button
-                        onClick={() => handleColorChange('white')}
-                        disabled={playerColor === 'white'}
-                    >
-                        White
-                    </button>
-                    <button
-                        onClick={() => handleColorChange('black')}
-                        disabled={playerColor === 'black'}
-                    >
-                        Black
-                    </button>
+                    <label className="switch">
+                    <input
+                        type="checkbox"
+                        checked={playerColor === 'white'}
+                        onChange={() => handleColorChange(playerColor === 'white' ? 'black' : 'white')}
+                    />
+                    <span className="slider round"></span>
+                    </label>
+                    {playerColor === 'white' ? 'White' : 'Black'}
+                </div>
+                <div>
+                    AI Mode:
+                    <label className="switch">
+                    <input
+                        type="checkbox"
+                        checked={isAiMode}
+                        onChange={toggleAiMode}
+                    />
+                    <span className="slider round"></span>
+                    </label>
+                    {isAiMode ? 'Enabled' : 'Disabled'}
                 </div>
             </div>
             <div className="chessboard">{renderBoard()}</div>
+            <div className="captured-pieces">
+                <div>
+                    White Captured:
+                    {capturedPieces.white.map((piece, index) => (
+                        <span key={index}>{piece.label}</span>
+                    ))}
+                </div>
+                <div>
+                    Black Captured:
+                    {capturedPieces.black.map((piece, index) => (
+                        <span key={index}>{piece.label}</span>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 };
-
 
 export default Chessboard;
